@@ -1,21 +1,31 @@
 package task
 
 import (
-	"fmt"
-
 	"Main.go/model"
 	"github.com/gofiber/fiber/v2"
 	"gorm.io/gorm"
 )
 
 type Handler struct {
-    DB *gorm.DB
+    DB *gorm.DB 
+}
+
+func (h *Handler) GetTaskByID(c *fiber.Ctx) error {
+    var task model.Task
+    id := c.Params("id")
+    result := h.DB.Where("id = ?", id).First(&task)
+    if result.Error != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error" : "Erro ao buscar tarefa",
+        })
+    } 
+    return c.JSON(task)
 }
 
 func (h *Handler) GetTasks(c *fiber.Ctx) error {
     var tasks []model.Task
-	err := h.DB.Find(&tasks)
-	if err != nil {
+	result := h.DB.Find(&tasks)
+	if result.Error != nil {
 		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
 			"error" : " Erro ao buscar tarefas",
 		})
@@ -30,7 +40,7 @@ func (h *Handler) CreateTask(c *fiber.Ctx) error{
 			"error": "Dados da tarefa inválidos",
 		})	
 	}
-	if task.Title == "" || task.Description == "" {
+	if task.Title == "" && task.Description == "" {
         return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
             "error": "O título e a descrição não podem estar vazios",
         })
@@ -42,15 +52,14 @@ func (h *Handler) CreateTask(c *fiber.Ctx) error{
 
 func (h *Handler) UpdateTask(c *fiber.Ctx) error {
     id := c.Params("id")
-	fmt.Println("ID: " , id)
     task := new(model.Task)
     if err := c.BodyParser(task); err != nil {
-        return c.Status(400).SendString(err.Error())
+        return c.Status(fiber.StatusBadRequest).SendString(err.Error())
     }
     var existingTask model.Task
 	result := h.DB.First(&existingTask, id)
     if result.Error != nil {
-        return c.Status(404).SendString("No task found with ID " + id)
+        return c.Status(404).SendString("Sem tarefas com esse ID" + id)
     }
 
     existingTask.Title = task.Title
@@ -65,8 +74,8 @@ func (h *Handler) DeleteTask(c *fiber.Ctx) error{
 	var task model.Task
 	result := h.DB.First(&task, id)
 	if result.Error != nil {
-		return c.Status(404).SendString("No task found with ID " + id)
+		return c.Status(404).SendString("Sem tarefas com esse ID" + id)
 	}
 	h.DB.Delete(&task)
-	return c.SendString("Task successfully deleted")
+	return c.SendString("Tarefa deletada com sucesso")
 }

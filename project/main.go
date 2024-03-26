@@ -16,18 +16,17 @@ func main() {
         panic("failed to connect database")
     }
 
-    db.AutoMigrate(&model.Task{})
+    db.AutoMigrate(&model.Task{})   
 
     handler := task.Handler{DB: db}
 
     app := fiber.New()
 
     api := app.Group("/api")
+    
+    api.Get("/", handler.GetTasks)
 
-    api.Get("/task", handler.GetTasks)
-    api.Get("/", func(c *fiber.Ctx) error {
-    return c.SendString("Estou vivo ;)")
-    })
+    api.Get("/task/:id", handler.GetTaskByID)
 
     api.Post("/task", handler.CreateTask)
 
